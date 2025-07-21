@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Gestión de Solicitudes</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', sans-serif;
+      display: flex;
+      height: 100vh;
+      background: #f4f6f9;
+    }
+    aside {
+      background-color: #34495e;
+      color: white;
+      width: 260px;
+      padding: 20px;
+    }
+    aside h2 { font-size: 20px; margin-bottom: 20px; }
+    aside button {
+      display: block;
+      margin-top: 10px;
+      padding: 12px;
+      background: #1abc9c;
+      border: none;
+      color: white;
+      font-weight: bold;
+      border-radius: 5px;
+      width: 100%;
+      cursor: pointer;
+    }
+    main { flex-grow: 1; padding: 30px; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+      background: white;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    th {
+      background: #1abc9c;
+      color: white;
+      padding: 12px;
+      text-align: left;
+    }
+    td {
+      padding: 10px;
+      border-bottom: 1px solid #eee;
+    }
+    .modal {
+      display: none;
+      position: fixed;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      width: 800px;
+      background: white;
+      padding: 25px;
+      border-radius: 10px;
+      z-index: 1001;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+    #overlay {
+      display: none;
+      position: fixed;
+      top: 0; left: 0;
+      width: 100vw; height: 100vh;
+      background: rgba(0, 0, 0, 0.4);
+      z-index: 1000;
+    }
+    input, select {
+      width: 100%;
+      padding: 8px;
+      margin-bottom: 10px;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+      font-size: 14px;
+    }
+    .btn-primary {
+      background-color: #3498db;
+      color: white;
+      padding: 10px 15px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .product-block {
+      border: 1px solid #ccc;
+      padding: 10px;
+      margin-bottom: 15px;
+      border-radius: 5px;
+    }
+  </style>
+</head>
+<body>
+
+<!-- Panel lateral de navegación -->
+<aside>
+  <h2>Panel de Gestión</h2>
+  <!-- Botones para abrir modales para registrar solicitudes, productos y proveedores -->
+  <button onclick="abrirModal('modalSolicitud')">+ Nueva Solicitud</button>
+  <button onclick="abrirModal('modalProducto')">+ Registrar Producto</button>
+  <button onclick="abrirModal('modalProveedor')">+ Registrar Proveedor</button>
+</aside>
+
+<!-- Contenido principal: Tabla de solicitudes registradas -->
+<main>
+  <h1>Solicitudes Registradas</h1>
+  <table>
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Orden</th>
+        <th>Fecha</th>
+        <th>Cliente</th>
+        <th>Estado</th>
+        <th>Acciones</th>
+      </tr>
+    </thead>
+    <tbody id="tablaSolicitudes"></tbody>
+  </table>
+</main>
+
+<!-- Overlay que oscurece el fondo cuando los modales están activos -->
+<div id="overlay" onclick="cerrarModales()"></div>
+
+<!-- Modal para registrar una nueva solicitud -->
+<div class="modal" id="modalSolicitud">
+  <h2>Nueva Solicitud</h2>
+  <label>Nombre del Cliente</label>
+  <input id="cliente" type="text">
+  <div id="productosContainer"></div>
+  <button onclick="agregarBloqueProducto()">+ Agregar Producto</button>
+  <h3>Estado de la Solicitud</h3>
+  <label>Estado</label>
+  <select id="estadoSolicitud">
+    <option value="pendiente">Pendiente</option>
+    <option value="aceptada">Aceptada</option>
+    <option value="rechazada">Rechazada</option>
+  </select>
+  <label>¿Cliente aprobó?</label>
+  <select id="clienteAprobo">
+    <option value="no">No</option>
+    <option value="si">Sí</option>
+  </select>
+  <label>¿Pagó?</label>
+  <select id="clientePago">
+    <option value="no">No</option>
+    <option value="si">Sí</option>
+  </select>
+  <label>¿Remisión generada?</label>
+  <select id="remisionGenerada">
+    <option value="no">No</option>
+    <option value="si">Sí</option>
+  </select>
+  <br><br>
+  <button class="btn-primary" onclick="guardarSolicitud()">Guardar Solicitud</button>
+</div>
+
+<!-- Modal para registrar un producto -->
+<div class="modal" id="modalProducto">
+  <h2>Registrar Producto</h2>
+  <label>Nombre</label><input id="nuevoProducto" type="text">
+  <label>Código SIIGO</label><input id="codigoSiigo" type="text">
+  <button class="btn-primary" onclick="agregarProducto()">Guardar Producto</button>
+</div>
+
+<!-- Modal para registrar un proveedor -->
+<div class="modal" id="modalProveedor">
+  <h2>Registrar Proveedor</h2>
+  <label>Nombre</label><input id="nuevoProveedor" type="text">
+  <label>Teléfono</label><input id="telefonoProveedor" type="text">
+  <label>Dirección</label><input id="direccionProveedor" type="text">
+  <label>Correo</label><input id="correoProveedor" type="email">
+  <button class="btn-primary" onclick="agregarProveedor()">Guardar Proveedor</button>
+</div>
+
+<!-- Modal para mostrar detalles de la solicitud -->
+<div class="modal" id="modalDetalle">
+  <h2>Detalle de la Solicitud</h2>
+  <div id="detalleContenido"></div>
+  <button class="btn-primary" onclick="cerrarModales()">Cerrar</button>
+</div>
+
+<script>
+  // Datos de ejemplo para productos, proveedores y solicitudes
+  const productos = [
+    { nombre: 'Extintor CO2', codigo: 'EXT-1001' },
+    { nombre: 'Botiquín de primeros auxilios', codigo: 'BOT-2002' },
+    { nombre: 'Lámpara de emergencia', codigo: 'LAM-3003' },
+    { nombre: 'Tetra Pak', codigo: 'TPK-4004' }
+  ];
+
+  const proveedores = [
+    { nombre: 'Proveedor A', telefono: '+57 300 123 4567', direccion: 'Calle 123, Bogotá', correo: 'proveedorA@example.com' },
+    { nombre: 'Proveedor B', telefono: '+57 312 987 6543', direccion: 'Avenida 7, Medellín', correo: 'proveedorB@example.com' },
+    { nombre: 'Proveedor C', telefono: '+57 315 555 2323', direccion: 'Carrera 10, Cali', correo: 'proveedorC@example.com' },
+    { nombre: 'Proveedor D', telefono: '+57 310 444 5555', direccion: 'Calle 45, Barranquilla', correo: 'proveedorD@example.com' }
+  ];
+
+  const solicitudes = [
+    {
+      cliente: 'Cliente 1',
+      numeroOrden: 1,
+      fechaCreacion: '2023-07-01',
+      fechaLimite: '2023-07-15',
+      estado: 'Pendiente',
+      clienteAprobo: 'No',
+      clientePago: 'No',
+      remisionGenerada: 'No',
+      productos: [
+        { producto: 'Extintor CO2', proveedor: 'Proveedor A' },
+        { producto: 'Lámpara de emergencia', proveedor: 'Proveedor B' }
+      ]
+    },
+    {
+      cliente: 'Cliente 2',
+      numeroOrden: 2,
+      fechaCreacion: '2023-07-02',
+      fechaLimite: '2023-07-16',
+      estado: 'Aceptada',
+      clienteAprobo: 'Sí',
+      clientePago: 'Sí',
+      remisionGenerada: 'Sí',
+      productos: [
+        { producto: 'Botiquín de primeros auxilios', proveedor: 'Proveedor C' }
+      ]
+    }
+  ];
+
+// Mostrar detalles de la solicitud con Código SIIGO en una tabla organizada
+function verSolicitud(index) {
+  const s = solicitudes[index];
+  
+  // Calcular el costo total sumando los precios de todos los productos
+  const totalCosto = s.productos.reduce((total, p) => total + (p.precio || 0), 0);  // Sumar los precios de los productos
+  
+  const detalle = `
+    <p><strong>Orden:</strong> ${s.numeroOrden}</p>
+    <p><strong>Fecha de Creación:</strong> ${s.fechaCreacion}</p>
+    <p><strong>Fecha Límite:</strong> ${s.fechaLimite}</p>
+    <p><strong>Cliente:</strong> ${s.cliente}</p>
+    <p><strong>Estado:</strong> ${s.estado}</p>
+    <p><strong>Aprobado:</strong> ${s.clienteAprobo}</p>
+    <p><strong>Pagó:</strong> ${s.clientePago}</p>
+    <p><strong>Remisión:</strong> ${s.remisionGenerada}</p>
+    <h4>Productos:</h4>
+    <table style="width:100%; border-collapse: collapse; margin-top: 10px; border: 1px solid #ddd;">
+      <thead>
+        <tr>
+          <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Producto</th>
+          <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Código SIIGO</th>
+          <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Proveedor</th>
+          <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Precio</th>
+          <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Tiempo</th>
+          <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Entrega</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${s.productos.map(p => `
+          <tr>
+            <td style="border: 1px solid #ddd; padding: 8px;">${p.producto}</td>
+            <td style="border: 1px solid #ddd; padding: 8px;">${productos.find(prod => prod.nombre === p.producto)?.codigo || 'N/A'}</td>
+            <td style="border: 1px solid #ddd; padding: 8px;">${p.proveedor}</td>
+            <td style="border: 1px solid #ddd; padding: 8px;">${p.precio || 'N/A'}</td>
+            <td style="border: 1px solid #ddd; padding: 8px;">${p.tiempo || 'N/A'}</td>
+            <td style="border: 1px solid #ddd; padding: 8px;">${p.entrega === 0 ? 'Domicilio' : 'Recogida'}</td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>
+    <p><strong>Total Costo de Cotización:</strong> $${totalCosto.toFixed(2)}</p> <!-- Mostrar el total -->
+  `;
+  document.getElementById("detalleContenido").innerHTML = detalle;
+  abrirModal("modalDetalle");
+}
+
+
+
+  // Funciones de apertura y cierre de modales
+  function abrirModal(id) {
+    document.getElementById("overlay").style.display = "block";
+    document.getElementById(id).style.display = "block";
+    if (id === 'modalSolicitud') prepararFormularioSolicitud();
+  }
+
+  function cerrarModales() {
+    document.getElementById("overlay").style.display = "none";
+    document.querySelectorAll(".modal").forEach(m => m.style.display = "none");
+  }
+
+  // Funciones para agregar productos y proveedores
+  function agregarProducto() {
+    const nombre = document.getElementById("nuevoProducto").value.trim();
+    const codigo = document.getElementById("codigoSiigo").value.trim();
+    if (nombre && codigo) productos.push({ nombre, codigo });
+    document.getElementById("nuevoProducto").value = "";
+    document.getElementById("codigoSiigo").value = "";
+    cerrarModales();
+  }
+
+  function agregarProveedor() {
+    const nombre = document.getElementById("nuevoProveedor").value.trim();
+    const telefono = document.getElementById("telefonoProveedor").value.trim();
+    const direccion = document.getElementById("direccionProveedor").value.trim();
+    const correo = document.getElementById("correoProveedor").value.trim();
+    if (nombre) proveedores.push({ nombre, telefono, direccion, correo });
+    document.getElementById("nuevoProveedor").value = "";
+    document.getElementById("telefonoProveedor").value = "";
+    document.getElementById("direccionProveedor").value = "";
+    document.getElementById("correoProveedor").value = "";
+    cerrarModales();
+  }
+
+  // Preparar formulario de nueva solicitud
+  function prepararFormularioSolicitud() {
+    document.getElementById("productosContainer").innerHTML = "";
+    agregarBloqueProducto();
+    const hoy = new Date();
+    const numeroOrden = solicitudes.length + 1;
+    const fechaCreacion = hoy.toISOString().split('T')[0];
+    const fechaLimite = sumarDiasHabiles(hoy, 15).toISOString().split('T')[0];
+    window.tempOrdenData = { numeroOrden, fechaCreacion, fechaLimite };
+  }
+
+  // Función para sumar días hábiles a una fecha
+  function sumarDiasHabiles(fecha, diasHabiles) {
+    let count = 0;
+    let temp = new Date(fecha);
+    while (count < diasHabiles) {
+      temp.setDate(temp.getDate() + 1);
+      const dia = temp.getDay();
+      if (dia !== 0 && dia !== 6) count++;
+    }
+    return temp;
+  }
+
+  // Función para agregar bloque de producto en el formulario
+  function agregarBloqueProducto() {
+    const container = document.getElementById("productosContainer");
+    const idx = container.children.length;
+    const div = document.createElement("div");
+    div.className = "product-block";
+    div.innerHTML = `
+      <label>Producto</label>
+      <select name="producto_${idx}">
+        ${productos.map(p => `<option value="${p.nombre}">${p.nombre}</option>`).join('')}
+      </select>
+      <label>Seleccionar Proveedor:</label>
+      <select name="selectProv_${idx}" onchange="agregarCotizacionProveedor(${idx}, this)">
+        <option value="">-- Selecciona un proveedor --</option>
+        ${proveedores.map(p => `<option value="${p.nombre}">${p.nombre}</option>`).join('')}
+      </select>
+      <div class="cotizaciones" id="cotizaciones_${idx}"></div>
+    `;
+    container.appendChild(div);
+  }
+
+  // Agregar cotización por proveedor
+function agregarCotizacionProveedor(idx, select) {
+  const value = select.value;
+  if (!value) return;
+  const contenedor = document.getElementById(`cotizaciones_${idx}`);
+  const existe = contenedor.querySelector(`[data-prov='${value}']`);
+  if (existe) return;
+
+  const proveedor = proveedores.find(p => p.nombre === value);
+  const block = document.createElement("div");
+  block.setAttribute("data-prov", value);
+  block.innerHTML = `
+    <fieldset style="margin-bottom:10px; padding:10px; border:1px dashed #ccc;">
+      <strong>${proveedor.nombre}</strong><br>
+      Tel: ${proveedor.telefono}<br>
+      Dir: ${proveedor.direccion}<br>
+      Email: ${proveedor.correo}<br><br>
+      Precio: <input type="number" name="precio_${idx}_${value}" style="width:80px" value="0">
+      Tiempo: <input type="number" name="tiempo_${idx}_${value}" style="width:60px" value="0">
+      Entrega: 
+      <select name="entrega_${idx}_${value}">
+        <option value="0">Domicilio</option>
+        <option value="1">Recogida</option>
+      </select>
+    </fieldset>`;
+  contenedor.appendChild(block);
+  select.value = "";
+}
+
+
+// Función para guardar la solicitud
+function guardarSolicitud() {
+  const cliente = document.getElementById("cliente").value.trim();
+  const { numeroOrden, fechaCreacion, fechaLimite } = window.tempOrdenData;
+  const estado = document.getElementById("estadoSolicitud").value;
+  const clienteAprobo = document.getElementById("clienteAprobo").value;
+  const clientePago = document.getElementById("clientePago").value;
+  const remisionGenerada = document.getElementById("remisionGenerada").value;
+  const bloques = document.querySelectorAll(".product-block");
+  const productosSeleccionados = [];
+
+  bloques.forEach((bloque, i) => {
+    const producto = bloque.querySelector(`select[name="producto_${i}"]`).value;
+    const cotizaciones = [];
+    bloque.querySelectorAll(".cotizaciones > div").forEach(div => {
+      const p = div.getAttribute("data-prov");
+      // Aquí nos aseguramos de que los valores de precio, tiempo y entrega sean números válidos
+      const precio = parseFloat(bloque.querySelector(`[name='precio_${i}_${p}']`)?.value) || 0;
+      const tiempo = parseFloat(bloque.querySelector(`[name='tiempo_${i}_${p}']`)?.value) || 0;
+      const entrega = parseInt(bloque.querySelector(`[name='entrega_${i}_${p}']`)?.value) || 0;
+
+      if (!isNaN(precio) && !isNaN(tiempo)) {
+        cotizaciones.push({ proveedor: p, precio, tiempo, entrega });
+      }
+    });
+    cotizaciones.sort((a, b) => a.precio - b.precio); // Ajusta el orden por precio
+    productosSeleccionados.push({ producto, proveedor: cotizaciones[0]?.proveedor || "N/A", precio: cotizaciones[0]?.precio, tiempo: cotizaciones[0]?.tiempo, entrega: cotizaciones[0]?.entrega });
+  });
+
+  if (cliente && productosSeleccionados.length > 0) {
+    solicitudes.push({
+      cliente, numeroOrden, fechaCreacion, fechaLimite,
+      estado, clienteAprobo, clientePago, remisionGenerada,
+      productos: productosSeleccionados
+    });
+    actualizarTabla();
+    cerrarModales();
+  } else {
+    alert("Faltan datos para guardar la solicitud.");
+  }
+}
+
+
+
+
+  // Función para actualizar la tabla de solicitudes
+  function actualizarTabla() {
+    const tbody = document.getElementById("tablaSolicitudes");
+    tbody.innerHTML = "";
+    solicitudes.forEach((s, idx) => {
+      tbody.innerHTML += `<tr>
+        <td>${idx + 1}</td>
+        <td>${s.numeroOrden}</td>
+        <td>${s.fechaCreacion}</td>
+        <td>${s.cliente}</td>
+        <td>${s.estado}</td>
+        <td><button onclick="verSolicitud(${idx})">Ver</button></td>
+      </tr>`;
+    });
+  }
+</script>
+
+</body>
+</html>
