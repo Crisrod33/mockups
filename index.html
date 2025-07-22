@@ -95,9 +95,49 @@
       margin-bottom: 15px;
       border-radius: 5px;
     }
+   .modal-eliminar {
+  display: none; /* Oculta el modal al inicio */
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+ 
+}
+
+
+.modal-content {
+  background: #fff;
+  padding: 20px;
+  width: 400px;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+}
+
+.btn-danger {
+  background-color: #d9534f;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  margin-left: 10px;
+  cursor: pointer;
+}
+
+
+
+    
+
   </style>
 </head>
 <body>
+
+
+
+
+
 
 <!-- Panel lateral de navegación -->
 <aside>
@@ -143,6 +183,7 @@
     <option value="aceptada">Aceptada</option>
     <option value="rechazada">Rechazada</option>
   </select>
+
   <label>¿Cliente aprobó?</label>
   <select id="clienteAprobo">
     <option value="no">No</option>
@@ -159,7 +200,8 @@
     <option value="si">Sí</option>
   </select>
   <br><br>
-  <button class="btn-primary" onclick="guardarSolicitud()">Guardar Solicitud</button>
+ <button class="btn-primary" id="btnGuardarSolicitud" onclick="guardarSolicitud()">Guardar Solicitud</button>
+
 </div>
 
 <!-- Modal para registrar un producto -->
@@ -188,6 +230,9 @@
 </div>
 
 <script>
+
+  let solicitudAEliminarIndex = null;
+
   // Datos de ejemplo para productos, proveedores y solicitudes
   const productos = [
     { nombre: 'Extintor CO2', codigo: 'EXT-1001' },
@@ -433,25 +478,156 @@ function guardarSolicitud() {
   }
 }
 
+function eliminarSolicitud(index) {
+  solicitudAEliminarIndex = index;
+  abrirModalEliminar('modalConfirmarEliminar');
+}
+
+function confirmarEliminacion() {
+  if (solicitudAEliminarIndex !== null) {
+    solicitudes.splice(solicitudAEliminarIndex, 1);
+    solicitudAEliminarIndex = null;
+    actualizarTabla();
+    cerrarModalEliminar('modalConfirmarEliminar');
+  }
+}
+function abrirModalEliminar(id) {
+  document.getElementById(id).style.display = 'flex';
+}
+
+function cerrarModalEliminar(id) {
+  document.getElementById(id).style.display = 'none';
+}
+
+function cerrarModalAlFondo(event) {
+  const modal = event.currentTarget;
+  modal.style.display = 'none';
+}
 
 
 
-  // Función para actualizar la tabla de solicitudes
-  function actualizarTabla() {
-    const tbody = document.getElementById("tablaSolicitudes");
-    tbody.innerHTML = "";
-    solicitudes.forEach((s, idx) => {
-      tbody.innerHTML += `<tr>
+function editarSolicitud(index) {
+  alert("Funcionalidad de edición en construcción. Solicitud #" + (index + 1));
+  // En el futuro puedes reutilizar el modal de crear solicitud para cargar y editar los datos
+}
+
+ // Actualizar la tabla de solicitudes con botones Ver, Editar y Eliminar
+function actualizarTabla() {
+  const tbody = document.getElementById("tablaSolicitudes");
+  tbody.innerHTML = "";
+  solicitudes.forEach((s, idx) => {
+    tbody.innerHTML += `
+      <tr>
         <td>${idx + 1}</td>
         <td>${s.numeroOrden}</td>
         <td>${s.fechaCreacion}</td>
         <td>${s.cliente}</td>
         <td>${s.estado}</td>
-        <td><button onclick="verSolicitud(${idx})">Ver</button></td>
+        <td>
+          <button onclick="verSolicitud(${idx})">Ver</button>
+          <button style="background-color: #e74c3c; color: white; border: none; padding: 5px 8px; margin-left: 4px; border-radius: 4px;" onclick="eliminarSolicitud(${idx})">🗑</button>
+          <button style="background-color: #3498db; color: white; border: none; padding: 5px 8px; margin-left: 4px; border-radius: 4px;" onclick="editarSolicitud(${idx})">🖋️</button>
+        </td>
       </tr>`;
-    });
-  }
-</script>
+  });
+}
 
+//Editar solicitud 
+function editarSolicitud(index) {
+  const solicitud = solicitudes[index];
+  abrirModal('modalSolicitud');
+  document.getElementById("cliente").value = solicitud.cliente;
+  document.getElementById("estadoSolicitud").value = solicitud.estado.toLowerCase();
+  document.getElementById("clienteAprobo").value = solicitud.clienteAprobo.toLowerCase();
+  document.getElementById("clientePago").value = solicitud.clientePago.toLowerCase();
+  document.getElementById("remisionGenerada").value = solicitud.remisionGenerada.toLowerCase();
+
+  document.getElementById("productosContainer").innerHTML = "";
+  solicitud.productos.forEach((p, i) => {
+    agregarBloqueProducto(); // crea el bloque vacío
+    const bloque = document.querySelectorAll(".product-block")[i];
+    bloque.querySelector(`select[name="producto_${i}"]`).value = p.producto;
+
+    // seleccionar proveedor
+    const prov = proveedores.find(x => x.nombre === p.proveedor);
+    if (prov) {
+      const select = bloque.querySelector(`select[name="selectProv_${i}"]`);
+      select.value = prov.nombre;
+      agregarCotizacionProveedor(i, select);
+      const precioInput = bloque.querySelector(`[name="precio_${i}_${prov.nombre}"]`);
+      const tiempoInput = bloque.querySelector(`[name="tiempo_${i}_${prov.nombre}"]`);
+      const entregaInput = bloque.querySelector(`[name="entrega_${i}_${prov.nombre}"]`);
+      if (precioInput) precioInput.value = p.precio || '';
+      if (tiempoInput) tiempoInput.value = p.tiempo || '';
+      if (entregaInput) entregaInput.value = p.entrega || 0;
+    }
+  });
+
+  // marcar que estamos editando
+  window.editandoIndex = index;
+
+  // cambiar botón
+  const btn = document.getElementById("btnGuardarSolicitud");
+  btn.innerText = "Actualizar Solicitud";
+  btn.onclick = actualizarSolicitud;
+}
+
+// Actualizar solicitud 
+function actualizarSolicitud() {
+  const index = window.editandoIndex;
+  if (index === undefined) return;
+
+  const cliente = document.getElementById("cliente").value.trim();
+  const estado = document.getElementById("estadoSolicitud").value;
+  const clienteAprobo = document.getElementById("clienteAprobo").value;
+  const clientePago = document.getElementById("clientePago").value;
+  const remisionGenerada = document.getElementById("remisionGenerada").value;
+  const bloques = document.querySelectorAll(".product-block");
+
+  const productosSeleccionados = [];
+
+  bloques.forEach((bloque, i) => {
+    const producto = bloque.querySelector(`select[name="producto_${i}"]`).value;
+    const cotizaciones = bloque.querySelectorAll(".cotizaciones > div");
+    cotizaciones.forEach(div => {
+      const p = div.getAttribute("data-prov");
+      const precio = parseFloat(bloque.querySelector(`[name='precio_${i}_${p}']`)?.value) || 0;
+      const tiempo = parseFloat(bloque.querySelector(`[name='tiempo_${i}_${p}']`)?.value) || 0;
+      const entrega = parseInt(bloque.querySelector(`[name='entrega_${i}_${p}']`)?.value) || 0;
+      productosSeleccionados.push({ producto, proveedor: p, precio, tiempo, entrega });
+    });
+  });
+
+  solicitudes[index] = {
+    ...solicitudes[index],
+    cliente,
+    estado,
+    clienteAprobo,
+    clientePago,
+    remisionGenerada,
+    productos: productosSeleccionados
+  };
+
+  window.editandoIndex = undefined;
+  document.getElementById("btnGuardarSolicitud").innerText = "Guardar Solicitud";
+  document.getElementById("btnGuardarSolicitud").onclick = guardarSolicitud;
+  cerrarModales();
+  actualizarTabla();
+}
+
+
+
+
+</script>
+<div id="modalConfirmarEliminar" class="modal-eliminar" >
+  <div class="modal-content" onclick="event.stopPropagation()">
+    <h3>¿Eliminar Solicitud?</h3>
+    <p>¿Estás seguro de que deseas eliminar esta solicitud?</p>
+    <div style="text-align: right; margin-top: 20px;">
+      <button class="btn-cancelar" onclick="cerrarModalEliminar('modalConfirmarEliminar')">Cancelar</button>
+      <button class="btn-danger" onclick="confirmarEliminacion()">Eliminar</button>
+    </div>
+  </div>
+</div>
 </body>
 </html>
