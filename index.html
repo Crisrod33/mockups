@@ -225,9 +225,28 @@
 <!-- Modal para mostrar detalles de la solicitud -->
 <div class="modal" id="modalDetalle">
   <h2>Detalle de la Solicitud</h2>
+
+  <div style="margin-bottom: 15px;">
+    <button class="btn-primary" onclick="mostrarTabDetalle()">📝 Detalle</button>
+    <button class="btn-primary" onclick="mostrarTabPago()">💳 Gestión de Pago</button>
+  </div>
+
   <div id="detalleContenido"></div>
+  <div id="pagoContenido" style="display:none;">
+    <label>Método de Pago</label>
+    <select>
+      <option value="efectivo">Efectivo</option>
+      <option value="tarjeta">Tarjeta</option>
+      <option value="transferencia">Transferencia</option>
+    </select>
+    <label>Fecha de Pago</label>
+    <input type="date" />
+    <button class="btn-primary" onclick="alert('Pago registrado (ficticio)')">Guardar Pago</button>
+  </div>
+
   <button class="btn-primary" onclick="cerrarModales()">Cerrar</button>
 </div>
+
 
 <script>
 
@@ -325,6 +344,15 @@ function verSolicitud(index) {
   abrirModal("modalDetalle");
 }
 
+function mostrarTabDetalle() {
+  document.getElementById("detalleContenido").style.display = "block";
+  document.getElementById("pagoContenido").style.display = "none";
+}
+
+function mostrarTabPago() {
+  document.getElementById("detalleContenido").style.display = "none";
+  document.getElementById("pagoContenido").style.display = "block";
+}
 
 
   // Funciones de apertura y cierre de modales
@@ -614,9 +642,6 @@ function actualizarSolicitud() {
   cerrarModales();
   actualizarTabla();
 }
-
-
-
 
 </script>
 <div id="modalConfirmarEliminar" class="modal-eliminar" >
